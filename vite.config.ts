@@ -8,8 +8,8 @@ export default defineConfig({
   plugins: [wasm(), topLevelAwait()],
   resolve: {
     alias: {
-      "step-renderer":     path.resolve(__dirname, "../../../pkg/step_renderer_bundler"),
-      "lecture-assembler": path.resolve(__dirname, "../../../pkg/lecture_assembler_bundler"),
+      "step-renderer":     path.resolve(__dirname, "../../pkg/step_renderer_bundler"),
+      "lecture-assembler": path.resolve(__dirname, "../../pkg/lecture_assembler_bundler"),
     },
   },
   server: {
@@ -19,7 +19,7 @@ export default defineConfig({
     fs: {
       allow: [
         path.resolve(__dirname),                            // editor/ itself
-        path.resolve(__dirname, "../../pkg"),               // pkg/ for WASM
+        path.resolve(__dirname, "../pkg"),               // pkg/ for WASM
       ],
     },
   },
