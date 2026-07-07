@@ -1,0 +1,130 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Lecture Editor</title>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; }
+    html, body { margin: 0; padding: 0; height: 100%;
+      font-family: system-ui, -apple-system, sans-serif;
+      background: #1e1e2e; color: #cdd6f4; overflow: hidden; }
+    #app { display: flex; flex-direction: column; height: 100vh; }
+
+    #toolbar { display: flex; align-items: center; gap: 8px;
+      padding: 6px 12px; background: #181825;
+      border-bottom: 1px solid #313244; flex-shrink: 0; }
+    #toolbar button { padding: 4px 10px; border-radius: 4px;
+      border: 1px solid #45475a; background: #313244;
+      color: #cdd6f4; cursor: pointer; font-size: 13px; }
+    #toolbar button:hover { background: #45475a; }
+    #toolbar button.primary { background: #89b4fa; color: #1e1e2e; border-color: #89b4fa; }
+    #toolbar button.primary:hover { background: #74c7ec; }
+    #toolbar button:disabled { opacity: 0.4; cursor: default; }
+    .sep { flex: 1; }
+    #workspace-label { font-size: 12px; color: #6c7086;
+      max-width: 340px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+
+    #main { display: flex; flex: 1; overflow: hidden; }
+
+    #sidebar { width: 220px; min-width: 150px; max-width: 360px;
+      background: #181825; border-right: 1px solid #313244;
+      overflow-y: auto; flex-shrink: 0; }
+
+    #editor-wrapper { display: flex; flex-direction: column; flex: 1; overflow: hidden; }
+    #editor-title { background: #181825; border-bottom: 1px solid #313244;
+      padding: 3px 10px; font-size: 11px; color: #6c7086; flex-shrink: 0; }
+    #editor-container { flex: 1; overflow: hidden; }
+    #editor-container .cm-editor { height: 100%; font-size: 14px; }
+    #editor-container .cm-scroller { overflow: auto; }
+
+    #preview-container { width: 420px; min-width: 180px;
+      border-left: 1px solid #313244; background: #fff;
+      flex-shrink: 0; display: flex; flex-direction: column; }
+    .pane-label { background: #181825; border-bottom: 1px solid #313244;
+      padding: 3px 10px; font-size: 11px; color: #6c7086; flex-shrink: 0; }
+    #preview-iframe { flex: 1; border: none; }
+
+    #diagnostics-bar { height: 110px; min-height: 32px;
+      border-top: 1px solid #313244; background: #181825;
+      overflow-y: auto; flex-shrink: 0; padding: 4px 8px; font-size: 12px; }
+    .diag-entry { padding: 2px 4px; border-radius: 3px; margin: 1px 0; }
+    .diag-error   { color: #f38ba8; }
+    .diag-warning { color: #fab387; }
+    .diag-info    { color: #89b4fa; }
+    .diag-none    { color: #a6e3a1; }
+
+    .tree-node { display: flex; align-items: center; gap: 4px;
+      padding: 3px 8px; cursor: pointer; user-select: none;
+      white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+      border-radius: 3px; margin: 1px 4px; }
+    .tree-node:hover { background: #313244; }
+    .tree-node.active { background: #45475a; }
+    .tree-lecture { font-weight: 600; color: #cba6f7; padding-left: 4px; }
+    .tree-lang    { color: #89dceb; padding-left: 16px; }
+    .tree-step    { color: #a6e3a1; padding-left: 28px; font-size: 12px; }
+    .tree-empty   { color: #6c7086; font-size: 12px; padding: 8px 12px; }
+
+    #context-menu { position: fixed; background: #313244;
+      border: 1px solid #45475a; border-radius: 6px; padding: 4px 0;
+      z-index: 9999; min-width: 160px; box-shadow: 0 4px 16px rgba(0,0,0,.5); }
+    #context-menu .menu-item { padding: 6px 16px; cursor: pointer;
+      font-size: 13px; color: #cdd6f4; }
+    #context-menu .menu-item:hover { background: #45475a; }
+    #context-menu .menu-sep { height: 1px; background: #45475a; margin: 4px 0; }
+
+    #modal-overlay { display: none; position: fixed; inset: 0;
+      background: rgba(0,0,0,.6); z-index: 10000;
+      align-items: center; justify-content: center; }
+    #modal-overlay.open { display: flex; }
+    #modal-box { background: #313244; border: 1px solid #45475a;
+      border-radius: 8px; padding: 24px; min-width: 320px; max-width: 480px; width: 100%; }
+    #modal-box h3 { margin: 0 0 16px; color: #cba6f7; }
+    #modal-box label { display: block; margin-bottom: 4px; font-size: 13px; color: #a6adc8; }
+    #modal-box input { width: 100%; padding: 6px 10px;
+      background: #1e1e2e; border: 1px solid #45475a; border-radius: 4px;
+      color: #cdd6f4; font-size: 14px; margin-bottom: 12px; }
+    .modal-actions { display: flex; gap: 8px; justify-content: flex-end; margin-top: 8px; }
+    .modal-actions button { padding: 6px 16px; border-radius: 4px; border: 1px solid #45475a;
+      background: #45475a; color: #cdd6f4; cursor: pointer; font-size: 13px; }
+    .modal-actions button.ok { background: #89b4fa; color: #1e1e2e; border-color: #89b4fa; }
+  </style>
+</head>
+<body>
+  <div id="app">
+    <div id="toolbar">
+      <button id="btn-open" class="primary">📂 Open Workspace</button>
+      <span id="workspace-label">No workspace open</span>
+      <div class="sep"></div>
+      <button id="btn-new-lecture">＋ Lecture</button>
+      <button id="btn-new-step" disabled>＋ Step</button>
+      <button id="btn-save" disabled>💾 Save</button>
+      <button id="btn-diagnostics">🔍 Diagnostics</button>
+    </div>
+    <div id="main">
+      <div id="sidebar"><div class="tree-empty">Open a workspace to begin.</div></div>
+      <div id="editor-wrapper">
+        <div id="editor-title">— no file open —</div>
+        <div id="editor-container"></div>
+      </div>
+      <div id="preview-container">
+        <div class="pane-label">Preview</div>
+        <iframe id="preview-iframe" sandbox="allow-scripts"></iframe>
+      </div>
+    </div>
+    <div id="diagnostics-bar"><span class="diag-none">No diagnostics.</span></div>
+  </div>
+  <div id="context-menu" style="display:none"></div>
+  <div id="modal-overlay">
+    <div id="modal-box">
+      <h3 id="modal-title">Dialog</h3>
+      <div id="modal-body"></div>
+      <div class="modal-actions">
+        <button id="modal-cancel">Cancel</button>
+        <button id="modal-ok" class="ok">OK</button>
+      </div>
+    </div>
+  </div>
+  <script type="module" src="/src/main.ts"></script>
+</body>
+</html>
