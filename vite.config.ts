@@ -19,7 +19,7 @@ export default defineConfig({
     fs: {
       allow: [
         path.resolve(__dirname),                            // editor/ itself
-        path.resolve(__dirname, "../pkg"),               // pkg/ for WASM
+        path.resolve(__dirname, "../../pkg"),               // pkg/ for WASM
       ],
     },
   },
